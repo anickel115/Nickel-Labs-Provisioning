@@ -1,0 +1,30 @@
+---
+- name: Revoke engineer lab access user in Active Directory
+  hosts: dc01
+  gather_facts: no
+
+  tasks:
+    - name: Remove user from engineer access group
+      ansible.windows.win_powershell:
+        script: |
+          $Username = "{{ username }}"
+          $GroupName = "{{ group_name }}"
+
+          if (Get-ADUser -Filter "SamAccountName -eq '$Username'" -ErrorAction SilentlyContinue) {
+              Remove-ADGroupMember -Identity $GroupName -Members $Username -Confirm:$false -ErrorAction SilentlyContinue
+          }
+
+    - name: Disable AD user account
+      ansible.windows.win_powershell:
+        script: |
+          $Username = "{{ username }}"
+
+          if (Get-ADUser -Filter "SamAccountName -eq '$Username'" -ErrorAction SilentlyContinue) {
+              Disable-ADAccount -Identity $Username
+          }
+
+    - name: Confirm user revocation result
+      ansible.windows.win_powershell:
+        script: |
+          Get-ADUser "{{ username }}" -Properties DisplayName,Enabled,MemberOf |
+          Select-Object SamAccountName,DisplayName,Enabled,MemberOf

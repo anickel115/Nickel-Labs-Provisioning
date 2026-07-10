@@ -1,8 +1,8 @@
 ---
-first_name: "Test"
-last_name: "Engineer"
-username: "test.engineer"
-display_name: "Test Engineer"
+first_name: "Jack"
+last_name: "B"
+username: "jack.b"
+display_name: "Jack B"
 temp_password: "Welcome123!"
 ou_path: "OU=Engineers,OU=NickelLabs,DC=nickellabs,DC=local"
 group_name: "Engineer-Access"

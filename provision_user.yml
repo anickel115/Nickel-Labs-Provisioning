@@ -1,0 +1,50 @@
+---
+- name: Provision engineer lab access user in Active Directory
+  hosts: dc01
+  gather_facts: no
+
+  tasks:
+    - name: Ensure engineer access group exists
+      ansible.windows.win_powershell:
+        script: |
+          $GroupName = "{{ group_name }}"
+          if (-not (Get-ADGroup -Filter "Name -eq '$GroupName'" -ErrorAction SilentlyContinue)) {
+              New-ADGroup -Name $GroupName -GroupScope Global -GroupCategory Security -Path "{{ ou_path }}"
+          }
+
+    - name: Create or update AD user
+      ansible.windows.win_powershell:
+        script: |
+          $Username = "{{ username }}"
+          $Password = ConvertTo-SecureString "{{ temp_password }}" -AsPlainText -Force
+          $OU = "{{ ou_path }}"
+
+          $ExistingUser = Get-ADUser -Filter "SamAccountName -eq '$Username'" -ErrorAction SilentlyContinue
+
+          if (-not $ExistingUser) {
+              New-ADUser `
+                -Name "{{ display_name }}" `
+                -GivenName "{{ first_name }}" `
+                -Surname "{{ last_name }}" `
+                -DisplayName "{{ display_name }}" `
+                -SamAccountName $Username `
+                -UserPrincipalName "$Username@nickellabs.local" `
+                -Path $OU `
+                -AccountPassword $Password `
+                -Enabled $true `
+                -ChangePasswordAtLogon $true
+          }
+          else {
+              Enable-ADAccount -Identity $Username
+          }
+
+    - name: Add user to engineer access group
+      ansible.windows.win_powershell:
+        script: |
+          Add-ADGroupMember -Identity "{{ group_name }}" -Members "{{ username }}" -ErrorAction SilentlyContinue
+
+    - name: Confirm user provisioning result
+      ansible.windows.win_powershell:
+        script: |
+          Get-ADUser "{{ username }}" -Properties DisplayName,Enabled,MemberOf |
+          Select-Object SamAccountName,DisplayName,Enabled,MemberOf
